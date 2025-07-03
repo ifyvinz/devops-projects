@@ -32,6 +32,7 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
+        working-directory: terraform
 
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
