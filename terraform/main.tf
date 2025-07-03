@@ -126,7 +126,7 @@ resource "aws_security_group" "bastion_sg" {
 }
 
 resource "aws_instance" "bastion" {
-  ami                         = "ami-06cd52961ce9f0d45" # Amazon Linux 2 AMI for eu-north-1
+  ami                         = "ami-00c8ac9147e19828e"
   instance_type               = "t3.micro"
   subnet_id                   = aws_subnet.public[0].id
   vpc_security_group_ids      = [aws_security_group.bastion_sg.id]
