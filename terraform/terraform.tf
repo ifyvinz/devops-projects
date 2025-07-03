@@ -2,10 +2,9 @@ terraform {
   required_version = ">= 1.8.3"
 
   backend "s3" {
-    bucket       = "my-terraform-state-devops-project"
-    key          = "prod/aws_infra"
-    region       = "eu-north-1"
-    
+    bucket = "my-terraform-state-devops-project"
+    key    = "prod/aws_infra"
+    region = "eu-north-1"
   }
 
   required_providers {
