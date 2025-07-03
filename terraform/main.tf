@@ -63,8 +63,11 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "aws_eip" "nat" {
-  vpc = true
+  tags = {
+    Name = "nat-eip"
+  }
 }
+
 
 resource "aws_nat_gateway" "natgw" {
   allocation_id = aws_eip.nat.id
