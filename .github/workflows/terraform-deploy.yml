@@ -17,7 +17,7 @@ jobs:
   terraform:
     name: Terraform Plan & Apply
     runs-on: ubuntu-latest
-    environment: production # Optional: Define an environment for better visibility/protection
+    #environment: production # Optional: Define an environment for better visibility/protection
 
     steps:
       - name: Checkout repository
@@ -65,9 +65,10 @@ jobs:
         working-directory: terraform
 
       - name: Display Bastion Public IP
-        # Access the output from the 'outputs_after_apply' step
+        # Access the output from the 'outAputs_after_apply' step
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: echo "Bastion Public IP: ${{ steps.outputs_after_apply.outputs.bastion_public_ip }}"
+        run: |
+          echo "Bastion Public IP: ${{ steps.outputs_after_apply.outputs.bastion_public_ip }}"
 
       - name: Get SSH Private Key Content (for manual secret creation)
         # This step is for initial setup ONLY.
@@ -84,7 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     # This job only runs when manually triggered via workflow_dispatch
     if: github.event_name == 'workflow_dispatch'
-    environment: production # Optional: Define an environment for better visibility/protection
+    #environment: production # Optional: Define an environment for better visibility/protection
 
     steps:
       - name: Checkout repository
@@ -99,7 +100,6 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           # IMPORTANT: Ensure this role ARN is correct for destroy operations.
-          
           role-to-assume: ${{ secrets.role_to_assume }}
           aws-region: eu-north-1
 
