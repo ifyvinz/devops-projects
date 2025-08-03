@@ -5,16 +5,19 @@ on:
     branches:
       - main
   pull_request:
-  workflow_dispatch:   # Add manual trigger for destroy job
+    branches:
+      - main # Typically you'd want plan on PRs, apply on merge to main
+  workflow_dispatch: # Add manual trigger for destroy job
 
 permissions:
-  id-token: write
-  contents: read
+  id-token: write # Required for OIDC to assume AWS IAM role
+  contents: read  # Required to checkout the repository code
 
 jobs:
   terraform:
     name: Terraform Plan & Apply
     runs-on: ubuntu-latest
+    environment: production # Optional: Define an environment for better visibility/protection
 
     steps:
       - name: Checkout repository
@@ -23,36 +26,65 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.8.3
+          terraform_version: 1.8.3 # Ensure this matches your local version or desired version
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::280434962275:role/GitHubActionsFederatedRole
+          # IMPORTANT: Replace with your actual AWS Account ID and IAM Role ARN
+          role-to-assume: ${{ secrets.role_to_assume }}
           aws-region: eu-north-1
 
       - name: Terraform Init
         run: terraform init
-        working-directory: terraform
+        working-directory: terraform # Ensure this is the correct path to your .tf files
 
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
         working-directory: terraform
 
       - name: Terraform Plan
-        id: plan
+        id: plan # Give this step an ID to access its outputs if needed, though not directly used for apply output
         run: terraform plan -no-color -out=tfplan
         working-directory: terraform
 
       - name: Terraform Apply
+        # This condition ensures apply runs only on pushes to the main branch
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: terraform apply -auto-approve tfplan
         working-directory: terraform
 
+      - name: Get Terraform Outputs (Bastion IP and SSH Key)
+        # This step runs after apply to fetch the actual outputs from the state
+        # It will only run if the 'Terraform Apply' step was executed successfully
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        id: outputs_after_apply # Give this step an ID to store its outputs
+        run: |
+          echo "bastion_public_ip=$(terraform output -raw bastion_public_ip)" >> "$GITHUB_OUTPUT"
+          echo "private_key_content=$(terraform output -raw private_key_content)" >> "$GITHUB_OUTPUT"
+        working-directory: terraform
+
+      - name: Display Bastion Public IP
+        # Access the output from the 'outputs_after_apply' step
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: echo "Bastion Public IP: ${{ steps.outputs_after_apply.outputs.bastion_public_ip }}"
+
+      - name: Get SSH Private Key Content (for manual secret creation)
+        # This step is for initial setup ONLY.
+        # After you've copied the key to a GitHub Secret, you should REMOVE this step.
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "WARNING: The private key content is printed below for initial secret setup ONLY."
+          echo "DO NOT do this in production or for subsequent runs."
+          echo "Please copy the key content below and add it as a GitHub Repository Secret named 'SSH_PRIVATE_KEY'."
+          echo "${{ steps.outputs_after_apply.outputs.private_key_content }}"
+
   terraform_destroy:
     name: Terraform Destroy
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'   # only run on manual trigger
+    # This job only runs when manually triggered via workflow_dispatch
+    if: github.event_name == 'workflow_dispatch'
+    environment: production # Optional: Define an environment for better visibility/protection
 
     steps:
       - name: Checkout repository
@@ -66,7 +98,9 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::280434962275:role/GitHubActionsFederatedRole
+          # IMPORTANT: Ensure this role ARN is correct for destroy operations.
+          
+          role-to-assume: ${{ secrets.role_to_assume }}
           aws-region: eu-north-1
 
       - name: Terraform Init
