@@ -253,6 +253,7 @@ resource "aws_instance" "k3s_worker" {
 
   user_data = templatefile("${path.module}/join_worker.sh.tpl", {
     master_ip = aws_instance.k3s_master.private_ip
+    path      = path.module
   })
 
   # The worker needs to wait for the master to be up and have its token
