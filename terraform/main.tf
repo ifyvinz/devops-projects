@@ -252,8 +252,8 @@ resource "aws_instance" "k3s_worker" {
   associate_public_ip_address = false # Worker is in private subnet
 
   user_data = templatefile("${path.module}/join_worker.sh.tpl", {
-    master_ip = aws_instance.k3s_master.private_ip
-    path      = path.module
+    master_ip        = aws_instance.k3s_master.private_ip
+    path             = path.module
     private_key_path = var.private_key_path
   })
 
@@ -264,4 +264,3 @@ resource "aws_instance" "k3s_worker" {
     Name = "k3s-worker"
   }
 }
-
